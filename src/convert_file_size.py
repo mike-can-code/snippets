@@ -28,12 +28,10 @@ def convert_file_size(*, size: int, from_unit: str, to_unit: str) -> float:
         valid_units = list(to_bytes_map.keys())
         raise ValueError(f"Invalid unit. Please use one of: {valid_units}")
     
-    # 1. Convert the original size to bytes
+    # Convert the original size to bytes
     size_in_bytes = size * to_bytes_map[from_unit]
 
-    # 2. Convert from bytes to the target unit
+    # Convert from bytes to the target unit
     converted_size = size_in_bytes / to_bytes_map[to_unit]
 
     return converted_size
-
-convert_file_size(size=150, from_unit = 'KB', to_unit = 'MB')
