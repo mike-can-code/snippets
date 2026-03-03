@@ -1,0 +1,101 @@
+import json
+
+def edi_parser_final(raw_edi_string: str) -> dict:
+    """
+    The definitive, best-practice parser for EDI X12 data. This version correctly
+    identifies delimiters from their fixed positions and robustly handles the
+    hierarchical structure of the EDI file for single or multiple groups.
+
+    Args:
+        raw_edi_string: The complete EDI data as a single raw string.
+
+    Returns:
+        A hierarchical dictionary representing the entire EDI file.
+    """
+    # Initialize the final hierarchical structure.
+    output = {
+        "delimiters": {},
+        "interchange": {
+            "header": None,
+            "functional_groups": [],
+            "trailer": None
+        }
+    }
+
+    # --- 1. Correctly Identify Delimiters ---
+    if len(raw_edi_string) < 107:
+        # A valid file must have an ISA segment and at least one segment terminator.
+        return output
+
+    # The element separator is always the 4th character (index 3).
+    element_delimiter = raw_edi_string[3]
+    # The segment terminator is always the character at index 106.
+    segment_terminator = raw_edi_string[106]
+
+    output["delimiters"] = {
+        "element": element_delimiter,
+        "segment": segment_terminator,
+        "component": raw_edi_string[104] # As correctly pointed out by you.
+    }
+
+    # --- 2. Split the file into segments using the CORRECT terminator ---
+    segments = iter(raw_edi_string.strip().split(segment_terminator))
+
+    # --- 3. Process the file hierarchically ---
+    try:
+        # Process ISA Header
+        isa_segment_str = next(segments)
+        output["interchange"]["header"] = isa_segment_str.split(element_delimiter)
+    except StopIteration:
+        return output
+
+    # Main loop for Functional Groups
+    while True:
+        try:
+            current_segment_str = next(segments).strip()
+            if not current_segment_str: continue
+
+            elements = current_segment_str.split(element_delimiter)
+            segment_id = elements[0]
+
+            if segment_id == 'GS':
+                functional_group = {"header": elements, "transaction_sets": []}
+                
+                # Inner loop for Transaction Sets
+                while True:
+                    ts_str = next(segments).strip()
+                    ts_elements = ts_str.split(element_delimiter)
+                    ts_id = ts_elements[0]
+
+                    if ts_id == 'ST':
+                        transaction_set = {"header": ts_elements, "segments": {}}
+                        
+                        # Detail loop for segments within the transaction
+                        while True:
+                            detail_str = next(segments).strip()
+                            detail_elements = detail_str.split(element_delimiter)
+                            detail_id = detail_elements[0]
+                            
+                            if detail_id == 'SE':
+                                transaction_set["trailer"] = detail_elements
+                                break
+                            
+                            if detail_id not in transaction_set["segments"]:
+                                transaction_set["segments"][detail_id] = []
+                            transaction_set["segments"][detail_id].append(detail_elements)
+                        
+                        functional_group["transaction_sets"].append(transaction_set)
+
+                    elif ts_id == 'GE':
+                        functional_group["trailer"] = ts_elements
+                        output["interchange"]["functional_groups"].append(functional_group)
+                        break
+
+            elif segment_id == 'IEA':
+                output["interchange"]["trailer"] = elements
+                break
+
+        except StopIteration:
+            break
+            
+    return output
