@@ -1,0 +1,2 @@
+edi_dirty_contents = bronze_df.select("content").first()[0]
+edi_dirty_contents
