@@ -1,0 +1,62 @@
+'''
+Create a function that allows me to convert from 1 color standard to another
+i am interested in hex, rgb, hsl, rgb tubple, rgb4, and color name
+i want to convert from 1 to the other
+
+i also want a cheat sheet of differenct color pallets (ie tableau, plotly, matplotlib, etc
+
+why does matplotlib tell me i must use color names
+
+'''
+
+import matplotlib.colors as mcolors
+import numpy as np
+
+def find_closest_color_name(color_input):
+    """
+    Finds the closest CSS4 named color for ANY valid Matplotlib color input.
+
+    Args:
+        color_input: A color in any format Matplotlib understands, e.g.,
+                     - Hex string ('#A51C30')
+                     - RGB/RGBA tuple ((0.65, 0.11, 0.19))
+                     - Named color ('red')
+
+    Returns:
+        str: The name of the closest CSS4 color.
+    """
+    try:
+        # --- Convert the input color to a standard RGB tuple ---
+        input_rgb = mcolors.to_rgb(color_input)
+        input_color_array = np.array(input_rgb)
+    except ValueError:
+        return f"Could not parse '{color_input}' as a color."
+
+    # Use the comprehensive CSS4 color list as our reference
+    named_colors = {name: mcolors.to_rgb(hex_val) for name, hex_val in mcolors.CSS4_COLORS.items()}
+    
+    min_distance = float('inf')
+    closest_name = None
+    
+    # Calculate the distance for each named color
+    for name, rgb in named_colors.items():
+        distance = np.sqrt(np.sum((input_color_array - rgb)**2))
+        if distance < min_distance:
+            min_distance = distance
+            closest_name = name
+            
+    return closest_name
+
+# --- EXAMPLES OF THE FLEXIBLE FUNCTION ---
+
+# 1. Passing a Hex Value (your original question)
+name_from_hex = find_closest_color_name('#A51C30')
+print(f"Closest name for hex '#A51C30' is: '{name_from_hex}'")
+
+# 2. Passing an RGB Tuple
+name_from_rgb = find_closest_color_name((0.7, 0.95, 0.9))
+print(f"Closest name for RGB (0.7, 0.95, 0.9) is: '{name_from_rgb}'")
+
+# 3. Passing a Named Color (it finds itself)
+name_from_name = find_closest_color_name('tomato')
+print(f"Closest name for 'tomato' is: '{name_from_name}'")
