@@ -10,3 +10,5 @@ def get_collection_of_flatfiles() -> pd.DataFrame:
     return collected
 
 df = get_collection_of_flatfiles()
+df['KB_Size'] = df.ByteSize.apply(lambda x: convert_file_size(size=x, from_unit='B', to_unit='KB'))
+df['MB_Size'] = df.ByteSize.apply(lambda x: convert_file_size(size=x, from_unit='B', to_unit='MB'))
